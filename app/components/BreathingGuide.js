@@ -3,76 +3,59 @@ import { useState, useEffect } from 'react'
 import { Wind, Pause, Play, RotateCcw } from 'lucide-react'
 
 export default function BreathingGuide() {
+  // 状态管理
   const [isActive, setIsActive] = useState(false)
-  const [phase, setPhase] = useState('inhale')
   const [count, setCount] = useState(4)
-  const [completedCycles, setCompletedCycles] = useState(0)
-  const [totalTime, setTotalTime] = useState(0)
+  const [currentStep, setCurrentStep] = useState('吸气') // 简化步骤提示
 
-  const phases = {
-    inhale: {
-      duration: 4,
-      text: '吸气...',
-      next: 'hold',
-      color: 'from-green-400 to-emerald-400',
-      instruction: '通过鼻子缓慢吸气，感受腹部鼓起'
-    },
-    hold: {
-      duration: 7,
-      text: '屏息...',
-      next: 'exhale',
-      color: 'from-blue-400 to-cyan-400',
-      instruction: '保持呼吸，让身体吸收氧气'
-    },
-    exhale: {
-      duration: 8,
-      text: '呼气...',
-      next: 'inhale',
-      color: 'from-purple-400 to-pink-400',
-      instruction: '通过嘴巴缓慢呼气，感受压力释放'
-    }
-  }
+  // 呼吸练习步骤：吸气(4秒)、屏息(7秒)、呼气(8秒)
+  const steps = [
+    { name: '吸气', duration: 4, color: 'from-green-400 to-emerald-400' },
+    { name: '屏息', duration: 7, color: 'from-blue-400 to-cyan-400' },
+    { name: '呼气', duration: 8, color: 'from-purple-400 to-pink-400' }
+  ]
 
-  const currentPhase = phases[phase]
-
-  useEffect(() => {
-    if (!isActive) return
-
-    const timer = setInterval(() => {
-      setCount(prev => {
-        if (prev <= 1) {
-          const nextPhase = currentPhase.next
-          setPhase(nextPhase)
-          if (nextPhase === 'inhale') {
-            setCompletedCycles(prev => prev + 1)
-          }
-          return phases[nextPhase].duration
-        }
-        return prev - 1
-      })
-
-      setTotalTime(prev => prev + 1)
-    }, 1000)
-
-    return () => clearInterval(timer)
-  }, [isActive, phase])
-
+  // 重置练习
   const resetExercise = () => {
     setIsActive(false)
-    setPhase('inhale')
     setCount(4)
-    setCompletedCycles(0)
-    setTotalTime(0)
+    setCurrentStep('吸气')
   }
 
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins}:${secs.toString().padStart(2, '0')}`
-  }
+  // 主计时器逻辑 - 大幅简化
+  useEffect(() => {
+    let timer = null
+
+    if (isActive) {
+      console.log('开始呼吸练习')
+      timer = setInterval(() => {
+        setCount(prev => {
+          if (prev <= 1) {
+            // 简单循环：4 -> 7 -> 8 -> 4...
+            setCurrentStep(currentStep === '吸气' ? '屏息' :
+                          currentStep === '屏息' ? '呼气' : '吸气')
+            return currentStep === '吸气' ? 7 :
+                   currentStep === '屏息' ? 8 : 4
+          }
+          return prev - 1
+        })
+      }, 1000)
+    }
+
+    // 清理函数
+    return () => {
+      if (timer) {
+        console.log('停止呼吸练习')
+        clearInterval(timer)
+      }
+    }
+  }, [isActive, currentStep])
+
+  // 当前步骤的颜色
+  const currentColor = steps.find(step => step.name === currentStep)?.color || 'from-green-400 to-emerald-400'
 
   return (
-    <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl shadow-xl p-6 md:p-8 border border-emerald-100">
+    <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl shadow-xl p-6 border border-emerald-100">
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center">
           <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center mr-4">
@@ -80,20 +63,23 @@ export default function BreathingGuide() {
           </div>
           <div>
             <h3 className="text-2xl font-bold text-gray-800">呼吸放松练习</h3>
-            <p className="text-gray-600">4-7-8呼吸法缓解焦虑</p>
+            <p className="text-gray-600">简化版呼吸法</p>
           </div>
         </div>
         <div className="flex space-x-2">
           <button
             onClick={resetExercise}
-            className="p-3 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors"
-            title="重置练习"
+            className="p-3 bg-white rounded-xl border border-gray-200 hover:bg-gray-50"
+            title="重置"
           >
             <RotateCcw className="w-5 h-5 text-gray-600" />
           </button>
           <button
-            onClick={() => setIsActive(!isActive)}
-            className={`p-3 rounded-xl transition-all ${
+            onClick={() => {
+              console.log('点击按钮，当前状态:', isActive, '将变为:', !isActive)
+              setIsActive(!isActive)
+            }}
+            className={`p-3 rounded-xl ${
               isActive
                 ? 'bg-red-500 hover:bg-red-600 text-white'
                 : 'bg-emerald-500 hover:bg-emerald-600 text-white'
@@ -104,71 +90,34 @@ export default function BreathingGuide() {
         </div>
       </div>
 
-      <div className="text-center mb-10">
-        <div className={`relative w-64 h-64 mx-auto rounded-full flex items-center justify-center mb-6 transition-all duration-500 ${isActive ? 'animate-breathe' : ''} bg-gradient-to-r ${currentPhase.color}`}>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center">
-              <div className="text-7xl font-bold text-white mb-2">{count}</div>
-              <div className="text-xl font-semibold text-white">{isActive ? currentPhase.text : '准备开始'}</div>
+      <div className="text-center mb-8">
+        <div className={`w-64 h-64 mx-auto rounded-full flex items-center justify-center mb-6 transition-all ${isActive ? 'animate-breathe' : ''} bg-gradient-to-r ${currentColor}`}>
+          <div className="text-center">
+            <div className="text-7xl font-bold text-white mb-2">{count}</div>
+            <div className="text-xl font-semibold text-white">
+              {isActive ? `${currentStep}...` : '准备开始'}
             </div>
           </div>
-          <div className="absolute -inset-4 border-4 border-white/30 rounded-full animate-ping"></div>
         </div>
 
-        <p className="text-lg text-gray-700 mb-6 max-w-md mx-auto">
-          {isActive ? currentPhase.instruction : '点击开始按钮，按照引导进行呼吸练习'}
+        <p className="text-gray-700 mb-4">
+          {isActive ? '专注于呼吸，放松身心' : '点击开始按钮进行呼吸练习'}
         </p>
 
-        <div className="flex justify-center items-center space-x-6">
-          <div className="text-center">
-            <div className="text-3xl font-bold text-emerald-600">{completedCycles}</div>
-            <div className="text-sm text-gray-600">完成循环</div>
-          </div>
-          <div className="h-12 w-px bg-emerald-200"></div>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-emerald-600">{formatTime(totalTime)}</div>
-            <div className="text-sm text-gray-600">练习时间</div>
-          </div>
+        <div className="flex justify-center space-x-4">
+          {steps.map((step, index) => (
+            <div key={index} className="text-center">
+              <div className="text-lg font-bold text-gray-800">{step.duration}</div>
+              <div className="text-sm text-gray-600">{step.name}</div>
+            </div>
+          ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        <div className="bg-white/80 p-5 rounded-xl border border-white text-center">
-          <div className="text-2xl font-bold text-emerald-600 mb-1">4</div>
-          <div className="text-sm font-medium text-gray-700 mb-1">吸气</div>
-          <div className="text-xs text-gray-500">秒</div>
-        </div>
-        <div className="bg-white/80 p-5 rounded-xl border border-white text-center">
-          <div className="text-2xl font-bold text-blue-600 mb-1">7</div>
-          <div className="text-sm font-medium text-gray-700 mb-1">屏息</div>
-          <div className="text-xs text-gray-500">秒</div>
-        </div>
-        <div className="bg-white/80 p-5 rounded-xl border border-white text-center">
-          <div className="text-2xl font-bold text-purple-600 mb-1">8</div>
-          <div className="text-sm font-medium text-gray-700 mb-1">呼气</div>
-          <div className="text-xs text-gray-500">秒</div>
-        </div>
-      </div>
-
-      <div className="bg-white/80 rounded-xl p-5 border border-white">
-        <h4 className="font-bold text-lg text-gray-800 mb-3 flex items-center">
-          <span className="w-3 h-3 bg-emerald-500 rounded-full mr-2"></span>
-          练习指导
-        </h4>
-        <ul className="space-y-2">
-          <li className="flex items-start">
-            <div className="w-2 h-2 bg-emerald-300 rounded-full mt-2 mr-3"></div>
-            <span className="text-gray-700">每天练习3-5次，每次4个循环</span>
-          </li>
-          <li className="flex items-start">
-            <div className="w-2 h-2 bg-emerald-300 rounded-full mt-2 mr-3"></div>
-            <span className="text-gray-700">睡前练习有助于改善睡眠质量</span>
-          </li>
-          <li className="flex items-start">
-            <div className="w-2 h-2 bg-emerald-300 rounded-full mt-2 mr-3"></div>
-            <span className="text-gray-700">感到焦虑或压力时随时使用</span>
-          </li>
-        </ul>
+      <div className="bg-white/80 rounded-xl p-4 border border-white">
+        <p className="text-gray-700 text-sm">
+          <span className="font-semibold">练习方法：</span>按照 4-7-8 节奏呼吸，每天练习几次有助于缓解焦虑。
+        </p>
       </div>
     </div>
   )
